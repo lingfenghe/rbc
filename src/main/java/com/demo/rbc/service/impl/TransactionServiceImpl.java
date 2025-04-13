@@ -29,7 +29,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Retryable(
-        value = {OptimisticLockException.class},
+        include = {OptimisticLockException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000)
     )
