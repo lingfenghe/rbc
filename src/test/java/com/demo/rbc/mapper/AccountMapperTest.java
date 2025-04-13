@@ -39,8 +39,7 @@ class AccountMapperTest {
         int originalVersion = account.getVersion();
         
         // 修改余额
-        account.setBalance(new BigDecimal("1500.00"));
-        int result = accountMapper.updateBalanceWithVersion(account);
+        int result = accountMapper.addBalanceWithVersion("AC0005913944", new BigDecimal(10.00), 0);
         
         assertEquals(1, result);
         // 验证版本号更新
