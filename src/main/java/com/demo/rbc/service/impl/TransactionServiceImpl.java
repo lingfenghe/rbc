@@ -1,6 +1,5 @@
 package com.demo.rbc.service.impl;
 
-import cn.hutool.core.util.IdUtil;
 import com.demo.rbc.constant.ErrorCode;
 import com.demo.rbc.entity.Account;
 import com.demo.rbc.entity.Transaction;
@@ -10,22 +9,37 @@ import com.demo.rbc.mapper.AccountMapper;
 import com.demo.rbc.mapper.TransactionMapper;
 import com.demo.rbc.service.TransactionService;
 import com.demo.rbc.util.SnowFlakeIdUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @Service
 public class TransactionServiceImpl implements TransactionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TransactionServiceImpl.class);
 
     @Autowired
     private AccountMapper accountMapper;
 
     @Autowired
     private TransactionMapper transactionMapper;
+
+    @Autowired
+    private RedisTemplate<String, Account> redisTemplate;
+
+    @Autowired
+    private TaskScheduler taskScheduler;
 
     @Override
     @Retryable(
@@ -59,6 +73,18 @@ public class TransactionServiceImpl implements TransactionService {
             throw new OptimisticLockException();
         }
 
+        List<String> cacheKeyList = new ArrayList<>();
+        cacheKeyList.add(buildCacheKey(sourceAccountNo));
+        cacheKeyList.add(buildCacheKey(targetAccountNo));
+        redisTemplate.delete(cacheKeyList);
+        logger.info("delete cache for the 1st time, cacheKeyList : {}", cacheKeyList);
+
+        //异步延迟1S做2次删除,解决极端条件下的数据一致性问题
+        taskScheduler.schedule(() -> {
+            redisTemplate.delete(cacheKeyList);
+            logger.info("delete cache for the 2ed time, cacheKeyList : {}", cacheKeyList);
+        }, new Date(System.currentTimeMillis() + 1000));
+
         Transaction transaction = new Transaction();
         transaction.setTxId(SnowFlakeIdUtils.getId());
         transaction.setSourceAccountNo(sourceAccountNo);
@@ -67,5 +93,9 @@ public class TransactionServiceImpl implements TransactionService {
         transactionMapper.insert(transaction);
 
         return transaction.getTxId();
+    }
+
+    private String buildCacheKey(String accountNo) {
+        return "account:" + accountNo;
     }
 }
