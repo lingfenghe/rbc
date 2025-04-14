@@ -5,6 +5,6 @@ import java.math.BigDecimal;
 
 @Data
 public class BalanceResponse {
-    private String accountId;
+    private String accountNo;
     private BigDecimal balance;
 }

@@ -14,6 +14,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
@@ -41,7 +42,7 @@ public class AccountServiceImpl implements AccountService {
         account = redisTemplate.opsForValue().get(buildCacheKey(accountNo));
         if (account != null) {
             response = new BalanceResponse();
-            response.setAccountId(accountNo);
+            response.setAccountNo(accountNo);
             response.setBalance(account.getBalance());
             logger.info("return from cache, account: {}", account);
             return response;
@@ -49,8 +50,20 @@ public class AccountServiceImpl implements AccountService {
 
         account = accountMapper.findByAccountNo(accountNo);
 
+        //防止缓存击穿
+        if (account == null) {
+            response = new BalanceResponse();
+            response.setAccountNo("NULL");
+            response.setBalance(new BigDecimal("0.00"));
+            logger.info("return from db, account: {}", account);
+
+            redisTemplate.opsForValue().set(buildCacheKey(accountNo), account, Duration.ofMinutes(1));
+            logger.info("write to cache, account : {}", account);
+            return response;
+        }
+
         response = new BalanceResponse();
-        response.setAccountId(accountNo);
+        response.setAccountNo(accountNo);
         response.setBalance(account.getBalance());
         logger.info("return from db, account: {}", account);
 
