@@ -7,12 +7,16 @@ import com.demo.rbc.service.AccountService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class AccountServiceImpl implements AccountService {
@@ -58,6 +62,37 @@ public class AccountServiceImpl implements AccountService {
 
     private String buildCacheKey(String accountNo) {
         return "account:" + accountNo;
+    }
+
+    @Override
+    public void preloadtRecentUpdatedAccountsToCache() {
+        List<Account> accounts = accountMapper.selectRecentUpdatedAccounts();
+        // 分批次处理（建议每批1000条）
+        int batchSize = 1000;
+        for (int i = 0; i < accounts.size(); i += batchSize) {
+            List<Account> subList = accounts.subList(i, Math.min(i + batchSize, accounts.size()));
+            // 序列化器需与RedisTemplate配置一致
+            redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                StringRedisSerializer keySerializer = (StringRedisSerializer) redisTemplate.getKeySerializer();
+                Jackson2JsonRedisSerializer<Account> valueSerializer =
+                        (Jackson2JsonRedisSerializer<Account>) redisTemplate.getValueSerializer();
+
+                subList.forEach(account -> {
+                    // 生成缓存键（与原有buildCacheKey逻辑保持一致）
+                    String key = buildCacheKey(account.getAccountNo());
+                    byte[] serializedKey = keySerializer.serialize(key);
+                    byte[] serializedValue = valueSerializer.serialize(account);
+
+                    // 设置带过期时间[7](@ref)
+                    connection.setEx(
+                            serializedKey,
+                            Duration.ofMinutes(30).getSeconds(), // 转换为秒
+                            serializedValue
+                    );
+                });
+                return null; // 必须返回null
+            });
+        }
     }
 
 }

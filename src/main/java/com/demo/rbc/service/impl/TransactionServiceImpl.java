@@ -61,16 +61,31 @@ public class TransactionServiceImpl implements TransactionService {
             throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
         }
 
-        // 使用乐观锁扣减账户余额,失败则通过springboot retry重试
-        int deductCount = accountMapper.deductBalanceWithVersion(sourceAccountNo, transferAmt, sourceAccount.getVersion());
-        if (deductCount == 0) {
-            throw new OptimisticLockException();
-        }
+        //更新顺序标准化
+        if(sourceAccountNo.compareTo(targetAccountNo) < 0) {
+            // 使用乐观锁扣减账户余额,失败则通过springboot retry重试
+            int deductCount = accountMapper.deductBalanceWithVersion(sourceAccountNo, transferAmt, sourceAccount.getVersion());
+            if (deductCount == 0) {
+                throw new OptimisticLockException();
+            }
 
-        // 使用乐观锁增加账户余额,失败则通过springboot retry重试
-        int addCount = accountMapper.addBalanceWithVersion(targetAccountNo, transferAmt, targetAccount.getVersion());
-        if (addCount == 0) {
-            throw new OptimisticLockException();
+            // 使用乐观锁增加账户余额,失败则通过springboot retry重试
+            int addCount = accountMapper.addBalanceWithVersion(targetAccountNo, transferAmt, targetAccount.getVersion());
+            if (addCount == 0) {
+                throw new OptimisticLockException();
+            }
+        } else {
+            // 使用乐观锁增加账户余额,失败则通过springboot retry重试
+            int addCount = accountMapper.addBalanceWithVersion(targetAccountNo, transferAmt, targetAccount.getVersion());
+            if (addCount == 0) {
+                throw new OptimisticLockException();
+            }
+
+            // 使用乐观锁扣减账户余额,失败则通过springboot retry重试
+            int deductCount = accountMapper.deductBalanceWithVersion(sourceAccountNo, transferAmt, sourceAccount.getVersion());
+            if (deductCount == 0) {
+                throw new OptimisticLockException();
+            }
         }
 
         List<String> cacheKeyList = new ArrayList<>();

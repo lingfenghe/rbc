@@ -4,6 +4,7 @@ import com.demo.rbc.entity.Account;
 import org.apache.ibatis.annotations.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Mapper
 public interface AccountMapper {
@@ -23,4 +24,17 @@ public interface AccountMapper {
     @Update("UPDATE account SET balance = balance + #{transferAmount}, version = version + 1 " +
             "WHERE account_no = #{accountNo} AND version = #{version}")
     int addBalanceWithVersion(String accountNo, BigDecimal transferAmount, Integer version);
+
+    @Select("""
+        SELECT *
+        FROM account
+        ORDER BY updated_time DESC
+        LIMIT 1000
+        """)
+    @Results({
+            @Result(property = "accountNo", column = "account_no"),
+            @Result(property = "balance", column = "balance"),
+            @Result(property = "version", column = "version")
+    })
+    List<Account> selectRecentUpdatedAccounts();
 }

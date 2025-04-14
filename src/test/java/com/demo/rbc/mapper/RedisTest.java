@@ -22,15 +22,15 @@ public class RedisTest {
     @Test
     void testSetAccountToCache() {
         Account account = new Account();
-        account.setAccountNo("AC0042856261");
-        account.setBalance(new BigDecimal("40681.71"));
+        account.setAccountNo("AC0004608826");
+        account.setBalance(new BigDecimal("31916.33"));
         account.setVersion(0);
-        redisTemplate.opsForValue().set("account:AC0042856261", account);
+        redisTemplate.opsForValue().set("account:AC0004608826", account);
     }
 
     @Test
     void getAccountFromCache() {
-        Account account = redisTemplate.opsForValue().get("account:AC0042856261");
+        Account account = redisTemplate.opsForValue().get("account:AC0004608826");
         logger.info("account : {}", account);
         logger.info("boolean : {}", account != null);
     }

@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,6 +31,14 @@ class AccountMapperTest {
         assertNotNull(account);
         assertEquals("AC0005913944", account.getAccountNo());
         assertEquals(0, account.getVersion());
+    }
+
+    @Test
+    void selectRecentUpdatedAccounts() {
+        List<Account> recentUpdatedAccounts = accountMapper.selectRecentUpdatedAccounts();
+        logger.info("recentUpdatedAccounts size: {}", recentUpdatedAccounts.size());
+        logger.info("recentUpdatedAccount: {}", recentUpdatedAccounts.get(0));
+        assertEquals(1000, recentUpdatedAccounts.size());
     }
 
     @Test

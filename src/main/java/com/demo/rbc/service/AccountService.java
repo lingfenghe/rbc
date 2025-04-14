@@ -8,4 +8,6 @@ public interface AccountService {
 
     BalanceResponse getBalance(String accountNo);
 
+    void preloadtRecentUpdatedAccountsToCache();
+
 }
