@@ -44,6 +44,7 @@ public class AccountServiceImpl implements AccountService {
             response = new BalanceResponse();
             response.setAccountNo(accountNo);
             response.setBalance(account.getBalance());
+            response.setVersion(account.getVersion());
             logger.info("return from cache, account: {}", account);
             return response;
         }
@@ -65,6 +66,7 @@ public class AccountServiceImpl implements AccountService {
         response = new BalanceResponse();
         response.setAccountNo(accountNo);
         response.setBalance(account.getBalance());
+        response.setVersion(account.getVersion());
         logger.info("return from db, account: {}", account);
 
         redisTemplate.opsForValue().set(buildCacheKey(accountNo), account, Duration.ofMinutes(30));

@@ -1,14 +1,17 @@
 package com.demo.rbc.service.impl;
 
 import com.demo.rbc.constant.ErrorCode;
+import com.demo.rbc.dto.BalanceResponse;
 import com.demo.rbc.entity.Account;
 import com.demo.rbc.entity.Transaction;
 import com.demo.rbc.exception.BusinessException;
 import com.demo.rbc.exception.OptimisticLockException;
 import com.demo.rbc.mapper.AccountMapper;
 import com.demo.rbc.mapper.TransactionMapper;
+import com.demo.rbc.service.AccountService;
 import com.demo.rbc.service.TransactionService;
 import com.demo.rbc.util.SnowFlakeIdUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +44,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Autowired
     private TaskScheduler taskScheduler;
 
+    @Autowired
+    private AccountService accountService;
+
     @Override
     @Retryable(
         include = {OptimisticLockException.class},
@@ -50,16 +56,22 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional(rollbackFor = Exception.class)
     public String transferFund(String sourceAccountNo, String targetAccountNo, BigDecimal transferAmt) throws BusinessException, OptimisticLockException {
         // 查询账户信息
-        Account sourceAccount = accountMapper.findByAccountNo(sourceAccountNo);
-        Account targetAccount = accountMapper.findByAccountNo(targetAccountNo);
+        BalanceResponse sourceAccount = accountService.getBalance(sourceAccountNo);
+        BalanceResponse targetAccount = accountService.getBalance(targetAccountNo);
 
-        if (sourceAccount == null || targetAccount == null) {
+        if (StringUtils.equals(sourceAccount.getAccountNo(), "NULL") || StringUtils.equals(targetAccount.getAccountNo(), "NULL")) {
             throw new BusinessException(ErrorCode.ACCOUNT_NOT_EXIST);
         }
 
         if (sourceAccount.getBalance().compareTo(transferAmt) < 0) {
             throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
         }
+
+        List<String> cacheKeyList = new ArrayList<>();
+        cacheKeyList.add(buildCacheKey(sourceAccountNo));
+        cacheKeyList.add(buildCacheKey(targetAccountNo));
+        redisTemplate.delete(cacheKeyList);
+        logger.info("delete cache for the 1st time, cacheKeyList : {}", cacheKeyList);
 
         //更新顺序标准化
         if(sourceAccountNo.compareTo(targetAccountNo) < 0) {
@@ -87,12 +99,6 @@ public class TransactionServiceImpl implements TransactionService {
                 throw new OptimisticLockException();
             }
         }
-
-        List<String> cacheKeyList = new ArrayList<>();
-        cacheKeyList.add(buildCacheKey(sourceAccountNo));
-        cacheKeyList.add(buildCacheKey(targetAccountNo));
-        redisTemplate.delete(cacheKeyList);
-        logger.info("delete cache for the 1st time, cacheKeyList : {}", cacheKeyList);
 
         //异步延迟1S做2次删除,解决极端条件下的数据一致性问题
         taskScheduler.schedule(() -> {
