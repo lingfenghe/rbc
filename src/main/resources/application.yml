@@ -2,10 +2,17 @@ spring:
   application:
     name: rbc
   datasource:
-    url: jdbc:mysql://localhost:3306/demo?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/rbc?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 16       # 建议设置为 CPU 核数*2（不超过数据库 max_connections 限制）
+      minimum-idle: 8            # 保持与 max-pool-size 的 50-70%
+      connection-timeout: 30000    # 连接获取超时(ms)
+      idle-timeout: 600000        # 空闲连接回收周期(10分钟)
+      max-lifetime: 1800000       # 连接最大存活周期(30分钟)
+      leak-detection-threshold: 5000  # 泄漏检测阈值(ms)[4]
   redis:
     host: 127.0.0.1
     port: 6379
