@@ -1,29 +1,22 @@
-# 构建阶段（官方OpenJDK镜像）
-FROM eclipse-temurin:17-jdk-jammy AS builder
-WORKDIR /rbc
-COPY . .
-RUN ./mvnw clean package -DskipTests
+# 使用官方推荐的镜像
+FROM openjdk:17
 
-# 运行阶段（官方JRE镜像）
-FROM eclipse-temurin:17-jre-jammy
-WORKDIR /rbc
+# 设置工作目录（遵循Linux文件系统层次标准）
+WORKDIR /data/app
 
-# 创建非root用户
-RUN addgroup --system javauser && adduser --system --ingroup javauser javauser
-USER javauser
+# 复制构建好的Spring Boot应用
+COPY rbc-1.0.0.jar rbc.jar
 
-# 复制构建产物
-COPY --from=builder --chown=javauser:javauser /rbc/target/*.jar rbc.jar
+# 设置JVM参数（支持通过环境变量覆盖）
+ENV JAVA_OPTS="-Xms512m -Xmx512m -Dfile.encoding=UTF-8"
 
-# 动态配置入口
-ENV JAVA_OPTS="-Xms512m -Xmx512m"
-ENV DB_URL="" DB_USER="" DB_PASSWORD="" REDIS_HOST=""
+# 安全上下文配置（非root用户运行）
+RUN groupadd -r springuser && useradd -r -g springuser springuser && chown -R springuser:springuser /data/app
+USER springuser
 
-# 启动命令
-ENTRYPOINT exec java $JAVA_OPTS -jar rbc.jar \
-  --spring.datasource.url=${DB_URL} \
-  --spring.datasource.username=${DB_USER} \
-  --spring.datasource.password=${DB_PASSWORD} \
-  --spring.redis.host=${REDIS_HOST}
+# 容器启动命令（支持环境变量覆盖）
+ENTRYPOINT exec java $JAVA_OPTS -jar rbc.jar
 
+
+# 声明暴露端口（与application.properties中的server.port保持一致）
 EXPOSE 8080
