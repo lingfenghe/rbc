@@ -3,7 +3,7 @@
     <Properties>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %highlight{%-5level} %logger{36} - %msg%n</Property>
         <Property name="LOG_PATH">logs</Property>
-        <Property name="LOG_FILE_NAME">rbc</Property>
+        <Property name="LOG_FILE_NAME">teaching-research-book</Property>
     </Properties>
 
     <Appenders>
@@ -28,7 +28,7 @@
 
     <Loggers>
         <!-- 自定义包日志级别 -->
-        <Logger name="com.demo.rbc" level="DEBUG" additivity="false">
+        <Logger name="com.qimingdaren.teaching.research.book" level="DEBUG" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="File"/>
         </Logger>

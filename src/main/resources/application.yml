@@ -1,34 +1,11 @@
 spring:
   application:
-    name: rbc
-  datasource:
-    url: jdbc:mysql://114.215.206.140:3306/rbc?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-    username: root
-    password: 123456
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 16       # 建议设置为 CPU 核数*2（不超过数据库 max_connections 限制）
-      minimum-idle: 8            # 保持与 max-pool-size 的 50-70%
-      connection-timeout: 30000    # 连接获取超时(ms)
-      idle-timeout: 600000        # 空闲连接回收周期(10分钟)
-      max-lifetime: 1800000       # 连接最大存活周期(30分钟)
-      leak-detection-threshold: 5000  # 泄漏检测阈值(ms)[4]
-  data:
-    redis:
-      host: 114.215.206.140
-      port: 6379
-      password: 123456
-      lettuce:
-        pool:
-          max-active: 20     # 最大连接数
-          max-idle: 8        # 最大空闲连接
-          min-idle: 2        # 最小空闲连接(必须>0)
-          max-wait: 5000ms    # 获取连接最大等待时间
-          time-between-eviction-runs: 30s # 关键配置(必须设置正值)
+    name: teaching-research-book
+
 server:
   port: 8080
   servlet:
-    context-path: /rbc
+    context-path: /teaching-research-book
     tomcat:
       threads:
         max: 1000
